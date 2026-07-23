@@ -1,0 +1,31 @@
+# ==========================================
+# 1. Credenciales y Archivos Sensibles
+# ==========================================
+**/secrets.h
+*.env
+
+# ==========================================
+# 2. PlatformIO y Archivos de Compilación
+# ==========================================
+.pio/
+.pioenvs/
+.piolibdeps/
+*.elf
+*.bin
+*.hex
+
+# ==========================================
+# 3. Archivos del Sistema y Editores (VS Code)
+# ==========================================
+.vscode/
+*.code-workspace
+.DS_Store
+Thumbs.db
+
+# ==========================================
+# 4. Entornos Virtuales y Cache de Python
+# ==========================================
+__pycache__/
+*.py[cod]
+.venv/
+venv/
