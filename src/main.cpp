@@ -2,9 +2,14 @@
 #include <Wire.h>
 #include <WiFi.h>
 #include <PubSubClient.h>
+#include <Adafruit_MPU6050.h>
+#include <Adafruit_Sensor.h>
 #include <secrets.h>
 
 void setup_wifi();
+void reconnect();
+// === HARDWARE INSTANCES ===
+Adafruit_MPU6050 mpu;
 
 // === NET AND MQTT CONFIGURATION===
 WiFiClient espClient;
@@ -99,7 +104,7 @@ void reconnect() {
         if(mqttClient.connect(clientID.c_str())){
             Serial.println("¡succesuflly connected to Wifi!");
         }else{
-            Serial.print("Fail in state: ");
+            Serial.print("Failed,rc=");
             Serial.print(mqttClient.state());
             Serial.println(". Retrying in 5 secounds...");
             delay(5000);
@@ -110,35 +115,44 @@ void reconnect() {
 void setup() {
 // Initialize serial communication for Edge telemetry output
     Serial.begin(115200);
-    setup_wifi();
-//Broker MQTT net configuration
-    mqttClient.setServer(MQTT_BROKER_IP, 1883);    
-    while (!Serial) {
-        ; // Wait for serial port connection (Required for native USB targets)
-    }
+    while (!Serial) {delay(10); }
+
     Serial.println("--- IIOT EDGE AI PIPELINE INITIALIZED ---");
-}
+
+    //Wifi conecction
+    setup_wifi();
+
+    //MQTT Server configuration
+    mqttClient.setServer(MQTT_BROKER_IP, 1883);
+
+    //Initialize the MPU using I2C
+    Wire.begin(21, 22); //SDA = GPI021, SCL = GPI022 by default on ESP32
+    if(!mpu.begin()) {
+        Seria.println("ERROR404: Chip 6050 Not found. Reevualte the wires");
+        while(1) {delay(10); }//Stop Execution if doesn't detect sensor
+    }
+    Serial.println("MPU6050 succesfully finded and initializing...");
+    //Optional ranges sensor deployment
+    mpu.setAccelerometerRange(MPU6050_RANGE_8_G);
+    mpu.setFilterBandwidth(MPU6050_BAND_21_HZ);
+
+    }
+
 void loop() {
     if(!mqttClient.connected()){
         reconnect();
     }
     mqttClient.loop();// Process intern task-works from MQTT library
 
-// Base physical values representing a healthy industrial motor (in Gs)    
-   const float base_x = 0.44;
-   const float base_y = 0.32;
-   const float base_z = 0.78;
-   
-// Injecting high-frequency pseudorandom industrial noise (+/- 0.05 Gs)
-    float noiseX = ((rand() %101) - 50 ) / 1000.0;
-    float noiseY = ((rand() %101) - 50 ) / 1000.0;
-    float noiseZ = ((rand() %101) - 50 ) / 1000.0;
+// CURRENT READ OF ACELEROMETER
+sensor_event_t a, g, temp;
+mpu.getEvent(&a, &g, &temp);
 
-// Simulated telemetry payload containing signal + noise
-    float ax = base_x + noiseX;
-    float ay = base_y + noiseY;
-    float az = base_z + noiseZ;
-
+//We get the real physics in m/s^2 
+    float ax = a.acceleration.x;
+    float ay = a.acceleration.y;
+    float az = a.acceleration.z;
+//Stack the REAL sample in the ringBuffer
     pushSample(ax, ay, az);
 
     if (bufferFull) {
