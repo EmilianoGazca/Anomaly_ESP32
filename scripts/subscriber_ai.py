@@ -1,19 +1,22 @@
-import paho.mqtt.client as mqtt
+# This script's meaning is being the subscriber of the model with the MQTT telemetry, this way you can see
+# the data in a easy readable way
 import argparse
-import os
-import json
 import csv
 from datetime import datetime
+import json
+import os
+import paho.mqtt.client as mqtt
 
-
-#1. Arguments configuration from consol
-parser = argparse.ArgumentParser(description = "MQTT subscriber & Telemetry logger ")
+# 1. Arguments configuration from console
+parser = argparse.ArgumentParser(
+    description="MQTT subscriber & Telemetry logger "
+)
 parser.add_argument(
     "--label",
     type=str,
     default="NORMAL",
     choices=["NORMAL", "ANOMALY"],
-    help="Label for current recolection state: NORMAL or ANOMALY"
+    help="Label for current recolection state: NORMAL or ANOMALY",
 )
 args = parser.parse_args()
 
@@ -21,13 +24,17 @@ args = parser.parse_args()
 BROKER_IP = "localhost"  # The IP of your Mosquitto Broker
 PORT = 1883
 TOPIC = "motor/vibration/telemetry"
-DATASET_PATH = os.path.join("..", "data", "telemetry_dataset.csv")
 
-# Build "data" carpet and headers if the file doesn't exists
-os.makedirs("data", exist_ok=True)
+# Ruta corregida: Guarda dentro de la carpeta 'data' en la raíz de tu proyecto
+DATA_DIR = "data"
+DATASET_PATH = os.path.join(DATA_DIR, "telemetry_dataset.csv")
+
+# Build "data" folder and headers if the file doesn't exist
+os.makedirs(DATA_DIR, exist_ok=True)
+
 if not os.path.exists(DATASET_PATH):
     with open(DATASET_PATH, mode="w", newline="") as f:
-        writer=csv.writer(f)
+        writer = csv.writer(f)
         writer.writerow(
             [
                 "timestamp",
@@ -38,14 +45,16 @@ if not os.path.exists(DATASET_PATH):
                 "std_y",
                 "std_z",
                 "label",
-
             ]
         )
+
 
 # === MQTT CALLBACKS ===
 def on_connect(client, userdata, flags, rc):
     if rc == 0:
-        print(f"[CONNECTED] Successfully connected to MQTT Broker at {BROKER_IP}:{PORT}")
+        print(
+            f"[CONNECTED] Successfully connected to MQTT Broker at {BROKER_IP}:{PORT}"
+        )
         client.subscribe(TOPIC)
         print(f"[SUBSCRIBED] Listening to topic: '{TOPIC}'...\n")
     else:
@@ -54,7 +63,7 @@ def on_connect(client, userdata, flags, rc):
 
 def on_message(client, userdata, msg):
     try:
-        # 1. Decode incoming JSON payload from ESP32
+        # 1. Decode incoming JSON payload from ESP32 / Mock
         payload_str = msg.payload.decode("utf-8")
         data = json.loads(payload_str)
 
@@ -69,21 +78,24 @@ def on_message(client, userdata, msg):
         std_y = data.get("std_y", 0.0)
         std_z = data.get("std_z", 0.0)
 
-        # 4. Console log prinying the label too
+        # 4. Console log printing the label too
         print(
-            f"[{now}] [{args.label}] -> RMS(x,y,z): ({rms_x:.3f}, {rms_y:.3f}, {rms_z:.3f}) | STD(x,y,z): ({std_x:.3f}, {std_y:.3f}, {std_z:.3f})")
+            f"[{now}] [{args.label}] -> RMS(x,y,z): ({rms_x:.3f}, {rms_y:.3f}, {rms_z:.3f}) | STD(x,y,z): ({std_x:.3f}, {std_y:.3f}, {std_z:.3f})"
+        )
 
-        # 5. Append telemetry row to CSV dataset
+        # 5. Append telemetry row to CSV dataset and flush immediately
         with open(DATASET_PATH, mode="a", newline="") as f:
             writer = csv.writer(f)
             writer.writerow(
                 [now, rms_x, rms_y, rms_z, std_x, std_y, std_z, args.label]
-                )
+            )
+            f.flush()  # <--- ¡Garantiza guardado instantáneo en disco!
 
     except json.JSONDecodeError:
         print(f"[WARN] Invalid JSON payload received: {msg.payload}")
     except Exception as e:
         print(f"[ERROR] An unexpected error occurred: {e}")
+
 
 # === MAIN LOOP ===
 def main():
