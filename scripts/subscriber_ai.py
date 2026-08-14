@@ -15,7 +15,7 @@ parser.add_argument(
     "--label",
     type=str,
     default="NORMAL",
-    choices=["NORMAL", "ANOMALY"],
+    choices= ["NORMAL", "ANOMALY"],
     help="Label for current recolection state: NORMAL or ANOMALY",
 )
 args = parser.parse_args()

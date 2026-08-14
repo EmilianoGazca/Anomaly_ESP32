@@ -34,7 +34,7 @@
 #define SCALER_SCALE_STD_Y  0.029245f
 #define SCALER_SCALE_STD_Z  0.029669f
 
-#define ANOMALY_THRESHOLD   0.195932f
+#define ANOMALY_THRESHOLD   0.5f
 // === HARDWARE INSTANCES ===
 Adafruit_MPU6050 mpu;
 
@@ -162,20 +162,42 @@ void setup_tflite() {
 // === MOCK DATA GENERATOR ===
 static unsigned long mock_t = 0;
 void generateMockFeatures(float features[6]) {
-    mock_t++;
-    float intensity = 1.0f + 0.25f * sinf(2.0f * PI * mock_t / 240.0f);
-    float load      = 1.0f + 0.15f * sinf(2.0f * PI * mock_t / 600.0f + 1.3f);
+    /*Slow oscilations inside +-1 Sigma of the training distribution*/
+    /*mock_t++;
 
-    float stdX = 0.15f * intensity;
-    float stdY = 1.2f * intensity * 0.95f;
-    float stdZ = 0.18f * intensity * 0.85f;
+    float s1 = sinf(2.0f * PI * mock_t / 240.0f);
+    float s2 = sinf(2.0f * PI * mock_t / 300.0f + 1.0f);
+    float s3 = sinf(2.0f * PI * mock_t / 320.0f + 2.0f);
+    float s4 = sinf(2.0f * PI * mock_t / 320.0f + 0.5f);
+    float s5 = sinf(2.0f * PI * mock_t / 260.0f + 1.7f);
+    float s6 = sinf(2.0f * PI * mock_t / 260.0f + 2.4f);
 
-    float rmsX = 1.2f * load + 2.0f * stdX;
-    float rmsY = 0.8f * load + 1.8f * stdY;
-    float rmsZ = 9.8f + 0.5f * intensity;
-    features[0] = rmsX; features[1] = rmsY; features[2] = rmsZ;
-    features[3] = stdX; features[4] = stdY; features[5] = stdZ;
+    features[0] = 1.512715f  + 0.145694f * s1; // rms_x
+    features[1] = 2.788685f  + 0.104139f * s2; // rms_y
+    features[2] = 10.302251f + 0.104370f * s3; // rms_z
+    features[3] = 0.150272f  + 0.028796f * s4; // std_x
+    features[4] = 1.100308f  + 0.029245f * s5; // std_y
+    features[5] = 0.153582f  + 0.029669f * s6; // std_z
+    */
+   //Two latent factors, the same as the CSV trainning file, to cause the device
+   //to read a NORMAL output
+   mock_t++;
+   float intensity = 1.0f + 0.25f * sinf(2.0f * PI * mock_t / 240.0f);
+   float load      = 1.0f + 0.15f * sinf(2.0f * PI * mock_t / 600.0f + 1.3f);
+
+   float stdX = 0.15f * intensity;
+   float stdY = 1.10f;
+   float stdZ = 0.18f * intensity * 0.85f;
+   float rmsX = 1.2f * load + 2.0f * stdX;
+   float rmsY = 0.8f * load + 1.8f * stdY;
+   float rmsZ = 9.8f + 0.5f * intensity;
+
+   features[0] = rmsX; features[1] = rmsY; features[2] = rmsZ;
+   features[3] = stdX; features[4] = stdY; features[5] = stdZ;
+   //Simulation of a failure using a x3 multiplier
+   for (int i = 0; i < 6; i++) features[i] *= 3.0f;
 }
+    
 
 // === EDGE AI INFERENCE ===
 bool runInference(float rmsX, float rmsY, float rmsZ,
