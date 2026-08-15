@@ -1,49 +1,49 @@
-# ⚙️ IIoT Edge AI Pipeline for Vibration Anomaly Detection
+## 🚀 Getting Started
 
-> **Status:** ✅ Phase 1 Operational — Edge inference with quantized TFLite Micro on ESP32
+### Prerequisites
 
-![ESP32](https://img.shields.io/badge/ESP32-DevKit_v1-blue)
-![TFLite Micro](https://img.shields.io/badge/TFLite_Micro-INT8-orange)
-![MQTT](https://img.shields.io/badge/MQTT-3.1.1-green)
-![C++](https://img.shields.io/badge/C++-17-blue)
+- PlatformIO Core or VS Code + PlatformIO extension
+- Python 3.9+ with `numpy`, `tensorflow`, `scikit-learn`, `paho-mqtt`
+- ESP32 DevKit v1 (or compatible)
 
-## 📌 Overview
+### 1. Clone and configure
 
-Industrial-grade **Edge AI** pipeline for condition monitoring of rotating machinery. The system performs **on-device inference** using a quantized autoencoder running directly on an ESP32 microcontroller, achieving **local anomaly detection without cloud dependency** — a core requirement for OT environments where latency, bandwidth, and data sovereignty matter.
+```bash
+git clone https://github.com/EmilianoGazca/Anomaly_ESP32.git
+cd Anomaly_ESP32
+cp include/secrets.example.h include/secrets.h
+# Edit secrets.h with your WiFi SSID, password, and MQTT broker IP
+```
 
-The pipeline implements the full chain from **raw vibration signal → DSP feature extraction → ML inference → threshold-based alert → MQTT telemetry**, all within the memory constraints of a $5 microcontroller.
+### 2. Train the model (optional — pre-trained weights included)
 
-### Why this matters for OT/ICS
-- **Local decision-making**: the device decides "normal" vs "anomaly" on-chip, even if WiFi goes down.
-- **Bandwidth-efficient**: only 6 floats + a status byte per inference cycle, vs. streaming raw vibration.
-- **Security-first design**: ready for mTLS/X.509 upgrade (see Roadmap).
-- **Field-calibrated threshold**: anomaly threshold computed against the *deployed* INT8 model, not the idealized float one.
+```bash
+python scripts/train_mtflite.py          # trains autoencoder + quantizes to INT8
+python scripts/exports_headers.py        # generates model_data.h
+python scripts/scaler_extract.py         # prints SCALER_* constants for main.cpp
+```
 
----
+### 3. Flash the firmware
 
-## 🏗️ Architecture
-─────────────────────┐ ┌──────────────────────────────────────────┐ ┌─────────────────┐
-│ MPU-6050 / Mock │───▶│ ESP32 (Edge Node) │───▶│ MQTT Broker │
-│ 3-axis @ 100 Hz │ │ • DSP: RMS + StdDev (N=64 window) │ │ (Mosquitto) │
-└─────────────────────┘ │ • TFLite Micro INT8 autoencoder │ └────────┬────────┘
-│ • Field-calibrated threshold │ │
-│ • Local anomaly decision │ ▼
-│ • MQTT publish (telemetry + alerts) │ ┌─────────────────┐
-└──────────────────────────────────────────┘ │ Python Subscr. │
-│ (monitoring) │
-└─────────────────┘
+```bash
+pio run -e esp32dev -t upload
+pio device monitor -b 115200
+```
 
+Expected output (normal operation):
 
-### Pipeline stages
+```
+--- IIOT EDGE AI PIPELINE INITIALIZED ---
+Wi-Fi connected. IP: 192.168.101.107
+[OK] TFLite loaded. Input: 6 dims, Output: 6 dims
+MSE: 0.151748 | Threshold: 0.500000 | normal
+```
 
-1. **Signal acquisition** — I²C read of triaxial accelerometer at 100 Hz (simulated with statistical mock during development).
-2. **DSP feature extraction** — Rolling window of N=64 samples; computes RMS and σ for each axis (6 features total).
-3. **Standardization** — Z-score normalization with `mean`/`scale` exported from the Python `StandardScaler` used in training.
-4. **On-device inference** — Quantized INT8 autoencoder (6 → 3 → 6) running via `tflite::MicroInterpreter` with a `tensor_arena` of 4 KB.
-5. **Anomaly scoring** — MSE between input and reconstruction; compared against a field-calibrated threshold.
-6. **Decision + transport** — Local `NORMAL`/`ANOMALY` label, published over MQTT with the raw MSE for downstream analytics.
+### 4. Subscribe to telemetry (optional)
 
----
+```bash
+python scripts/subscriber_ai.py
+```
 
 ## 🧠 The ML model
 
@@ -136,7 +136,6 @@ Simulated fault (×3 features)
 8,000+
 *** ANOMALY ***
 telemetry + >> ALERT published on MQTT
-📸 Add screenshots of the serial monitor in both states to /docs/ for full visual proof.
 
 🗺️ Roadmap
 Phase 1 — Firmware + DSP + mock data + edge inference ✅
@@ -168,4 +167,4 @@ MQTT v3.1.1 specification
 📄 License
 MIT — see LICENSE.
 Built as part of a multi-project portfolio toward an Industrial Edge AI & OT Security Engineer profile. See ROADMAP.md for the broader context.
-
+*Built as part of a multi-project portfolio toward an Industrial Edge AI & OT Security Engineer profile (TinyML · Embedded Industrial · IIoT Protocols · OT/ICS Security · Edge-to-Cloud).*
