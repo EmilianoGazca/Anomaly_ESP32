@@ -212,6 +212,6 @@ git tag -a v1.0-edge-ai -m "Phase 1 complete: on-device INT8 inference with two-
 # 5. Crea el repo en GitHub (web) como "Anomaly_ESP32", público, SIN README
 # 6. Empuja todo
 git branch -M main
-git remote add origin https://github.com/tu-usuario/Anomaly_ESP32.git
+git remote add origin git clone https://github.com/EmilianoGazca/Anomaly_ESP32.git
 git push -u origin main
 git push origin v1.0-edge-ai
