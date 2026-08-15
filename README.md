@@ -118,8 +118,12 @@ MSE: 0.251706 | Threshold: 0.500000 | normal
 python scripts/subscriber_ai.py
 
 
-Demo — Two-state validation
+## 📊 Demo — Two-state validation
 A detector is only as good as its ability to shout when it should shout. The pipeline was validated in both regimes:
+<p align="center">
+  <img src="docs/serial-normal.png" alt="Normal operation: MSE 0.14-0.27, status normal" width="49%">
+  <img src="docs/serial-anomaly.png" alt="Simulated fault: MSE 8000+, ANOMALY + MQTT alert" width="49%">
+</p>
 State
 Typical MSE
 Decision

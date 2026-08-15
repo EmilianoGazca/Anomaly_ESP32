@@ -195,7 +195,7 @@ void generateMockFeatures(float features[6]) {
    features[0] = rmsX; features[1] = rmsY; features[2] = rmsZ;
    features[3] = stdX; features[4] = stdY; features[5] = stdZ;
    //Simulation of a failure using a x3 multiplier
-   for (int i = 0; i < 6; i++) features[i] *= 3.0f;
+   //for (int i = 0; i < 6; i++) features[i] *= 3.0f;
 }
     
 
